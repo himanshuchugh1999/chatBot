@@ -2,13 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, FlatList, TouchableOpacity, StyleSheet, SafeAreaView, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import Voice from '@react-native-voice/voice'
+import Voice from '@react-native-voice/voice';
+import { PermissionsAndroid } from 'react-native';
+
 const ChatBotScreen: React.FC = () => {
     const [inputText, setInputText] = useState('');
     const [recipes, setRecipes] = useState<any[]>([]);
     const [isListening, setIsListening] = useState(false);
 
     useEffect(() => {
+
+        Voice.onSpeechStart = onStart;
+        Voice.onSpeechEnd = onStop;
         Voice.onSpeechResults = onSpeechResultsHandler;
         Voice.onSpeechError = onSpeechErrorHandler;
 
@@ -17,8 +22,32 @@ const ChatBotScreen: React.FC = () => {
         };
     }, []);
 
+    const onStart = () => { console.log('started'); }
+    const onStop = () => { console.log('stoped'); }
+    const requestMicrophonePermission = async () => {
+        try {
+            const granted = await PermissionsAndroid.request(
+                PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+                {
+                    title: 'Microphone Permission',
+                    message: 'This app needs access to your microphone to use voice recognition.',
+                    buttonNeutral: 'Ask Me Later',
+                    buttonNegative: 'Cancel',
+                    buttonPositive: 'OK',
+                }
+            );
+            if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+                console.error('Microphone permission denied');
+            }
+        } catch (err) {
+            console.warn(err);
+        }
+    };
+
     const onSpeechResultsHandler = (event: any) => {
+        console.log('Transcribed Text111:', event);
         if (event.value && event.value.length > 0) {
+            console.log('Transcribed Text:', event.value[0]);
             setInputText(event.value[0]);
             setIsListening(false);
         }
@@ -31,10 +60,11 @@ const ChatBotScreen: React.FC = () => {
 
     const startListening = async () => {
         try {
+            //await requestMicrophonePermission();
             //setInputText('');
             setIsListening(true);
-            await Voice.stop();
-            await Voice.start('en-US');
+            //await Voice.stop();
+            await Voice.start('en-US',);
         } catch (error) {
             console.error('Error starting voice recognition:', error);
             setIsListening(false);
@@ -45,6 +75,7 @@ const ChatBotScreen: React.FC = () => {
         try {
             setIsListening(false);
             await Voice.stop();
+            await Voice.destroy();
         } catch (error) {
             console.error('Error stopping voice recognition:', error);
         }
